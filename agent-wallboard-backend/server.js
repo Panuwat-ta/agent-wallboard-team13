@@ -67,8 +67,8 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// 🚫 Handle 404
-app.all('*', (req, res) => {
+// 🚫 Handle 404 // แก้ครับ เวอร์ชันใหม่ ใช้ app.all(/.*/, …) แล้วครับ
+app.all(/.*/, (req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`
