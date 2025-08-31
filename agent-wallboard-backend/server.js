@@ -78,14 +78,93 @@ app.all('*', (req, res) => {
 // 🚨 Global Error Handler
 app.use(errorHandler);
 
+
+// แทนที่ WebSocket section เดิม
 // 📡 WebSocket Connection Management
+const connectedClients = new Map(); // เก็บ client connections
+
 io.on('connection', (socket) => {
-  logger.info(`WebSocket connected: ${socket.id}`);
-  
-  socket.on('disconnect', () => {
-    logger.info(`WebSocket disconnected: ${socket.id}`);
+  logger.info(`WebSocket connected: ${socket.id}`, {
+    userAgent: socket.request.headers['user-agent'],
+    ip: socket.request.connection.remoteAddress
+  });
+
+  // Handle client registration
+  socket.on('register', (data) => {
+    const { userType, userId } = data; // userType: 'agent', 'supervisor', 'admin'
+    connectedClients.set(socket.id, { userType, userId, connectedAt: new Date() });
+    
+    logger.info(`Client registered: ${userType} - ${userId}`, { socketId: socket.id });
+    
+    // Send welcome message
+    socket.emit('registered', {
+      message: 'Successfully connected to Agent Wallboard System',
+      timestamp: new Date().toISOString(),
+      connectedClients: connectedClients.size
+    });
+  });
+
+  // Handle agent status updates
+  socket.on('agentStatusChange', (data) => {
+    logger.info('WebSocket agent status change:', data);
+    // Broadcast to all supervisors and dashboard
+    socket.broadcast.emit('agentStatusUpdate', {
+      ...data,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Handle messages
+  socket.on('sendMessage', (data) => {
+    logger.info('WebSocket message:', { 
+      from: data.from, 
+      to: data.to, 
+      type: data.type 
+    });
+    
+    if (data.to === 'all') {
+      socket.broadcast.emit('broadcastMessage', data);
+    } else {
+      // Send to specific agent
+      socket.broadcast.emit('privateMessage', data);
+    }
+  });
+
+  // Heartbeat mechanism
+  const heartbeatInterval = setInterval(() => {
+    socket.emit('ping', { timestamp: new Date().toISOString() });
+  }, 30000);
+
+  socket.on('pong', () => {
+    // Client is alive
+    logger.debug(`Heartbeat received from ${socket.id}`);
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', (reason) => {
+    clearInterval(heartbeatInterval);
+    const clientInfo = connectedClients.get(socket.id);
+    connectedClients.delete(socket.id);
+    
+    logger.info(`WebSocket disconnected: ${socket.id}`, { 
+      reason, 
+      clientInfo,
+      remainingClients: connectedClients.size 
+    });
+
+    // Notify other clients about disconnection if it was an agent
+    if (clientInfo && clientInfo.userType === 'agent') {
+      socket.broadcast.emit('agentDisconnected', {
+        agentId: clientInfo.userId,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 });
+
+// Make io available to routes
+app.set('io', io);
+global.io = io;
 
 // 🚀 Start Server
 server.listen(PORT, () => {
