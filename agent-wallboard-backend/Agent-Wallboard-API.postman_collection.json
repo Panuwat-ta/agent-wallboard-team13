@@ -1,0 +1,153 @@
+{
+  "info": {
+    "name": "Agent Wallboard API",
+    "description": "API collection for Call Center Agent Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "agentCode",
+      "value": "A999"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Get All Agents",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/agents",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "agents"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has success property', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.success).to.be.true;",
+              "});",
+              "",
+              "pm.test('Response has agents data', function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.data).to.have.property('agents');",
+              "    pm.expect(jsonData.data.agents).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agentCode\": \"{{agentCode}}\",\n  \"name\": \"Test Agent\",\n  \"skills\": [\"English\", \"Technical Support\"],\n  \"supervisor\": \"S001\",\n  \"department\": \"Testing\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/agents/{{agentCode}}/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "agents", "{{agentCode}}", "login"]
+        }
+      }
+    },
+    {
+      "name": "Update Agent Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Active\",\n  \"reason\": \"Ready to take calls\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/agents/{{agentCode}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "agents", "{{agentCode}}", "status"]
+        }
+      }
+    },
+    {
+      "name": "Send Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from\": \"supervisor1\",\n  \"fromName\": \"Sarah Wilson\",\n  \"to\": \"{{agentCode}}\",\n  \"message\": \"Please check your queue for priority customers\",\n  \"type\": \"instruction\",\n  \"priority\": \"high\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/messages",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "messages"]
+        }
+      }
+    },
+    {
+      "name": "Get Agent Messages",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/messages/agent/{{agentCode}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "messages", "agent", "{{agentCode}}"]
+        }
+      }
+    },
+    {
+      "name": "Dashboard Stats",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/dashboard/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "dashboard", "stats"]
+        }
+      }
+    }
+  ]
+}
